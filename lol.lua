@@ -3,15 +3,15 @@
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
-local enabled = false
+local enabled = true -- ON by default
 local buying = false
 local savedPosition = nil
 
 -- Watermark
 local statusLabel = Drawing.new("Text")
-statusLabel.Text = "Auto Armor | OFF"
+statusLabel.Text = "Auto Armor | ON"
 statusLabel.Size = 13
-statusLabel.Color = Color3.fromRGB(200, 200, 200)
+statusLabel.Color = Color3.fromRGB(100, 220, 130)
 statusLabel.Transparency = 1
 statusLabel.Outline = true
 statusLabel.Position = Vector2.new(25, 25)
@@ -49,43 +49,44 @@ local function buyArmor()
     local armorVal = bodyEffects and bodyEffects:FindFirstChild("Armor")
     if not armorVal then buying = false return end
 
-    savedPosition = hrp.Position
-
     local block = game.Workspace.Ignored.Shop:FindFirstChild("[High-Medium Armor] - $2589")
     if not block then print("[AutoArmor] No block") buying = false return end
 
     local head = block:FindFirstChild("Head")
     if not head then print("[AutoArmor] No head") buying = false return end
 
+    -- Save position right away
+    savedPosition = hrp.Position
+    print("[AutoArmor] Saved: " .. tostring(savedPosition))
+
     -- Unequip tool
-    print("[AutoArmor] Unequipping tool")
+    print("[AutoArmor] Unequipping")
     keypress(0x31) task.wait(0.05) keyrelease(0x31) task.wait(0.05)
     keypress(0x32) task.wait(0.05) keyrelease(0x32) task.wait(0.05)
     keypress(0x33) task.wait(0.05) keyrelease(0x33) task.wait(0.05)
     keypress(0x33) task.wait(0.05) keyrelease(0x33) task.wait(0.1)
 
-    if not enabled then buying = false return end
-
     -- Teleport onto block
     print("[AutoArmor] Teleporting to shop")
     hrp.Position = head.Position + Vector3.new(0, 2.5, 0)
+    task.wait(0.15)
 
-    -- Force look down BEFORE and AFTER teleport
+    -- Look down multiple times to make sure it sticks
     mousemoverel(0, 9999)
     task.wait(0.1)
     mousemoverel(0, 9999)
     task.wait(0.1)
 
-    -- Exit shiftlock so mouse is free
+    -- Exit shiftlock
     pressShift()
+    task.wait(0.1)
 
-    -- Look down again after exiting shiftlock
+    -- Look down again after shiftlock exit
     mousemoverel(0, 9999)
     task.wait(0.1)
 
-    -- Spam click until armor bought or cancelled
-    print("[AutoArmor] Spamming click...")
-    local armorBought = false
+    -- Spam click until armor bought or hit limit
+    print("[AutoArmor] Clicking...")
     local attempts = 0
 
     while attempts < 50 do
@@ -93,42 +94,32 @@ local function buyArmor()
             print("[AutoArmor] Cancelled")
             break
         end
-
-        -- Keep forcing look down every click
         mousemoverel(0, 9999)
         mouse1click()
         task.wait(0.1)
-
         if armorVal.Value > 0 then
             print("[AutoArmor] Bought after " .. attempts + 1 .. " clicks!")
-            armorBought = true
             break
         end
-
         attempts += 1
     end
 
     -- Re-enter shiftlock
     pressShift()
 
-    if not armorBought then
-        print("[AutoArmor] Not bought - staying put")
-        buying = false
-        return
-    end
-
-    -- Teleport back
+    -- Always tp back no matter what
     task.wait(0.1)
     print("[AutoArmor] Teleporting back")
     hrp.Position = savedPosition
-
     print("[AutoArmor] Done!")
+
     task.wait(1)
     buying = false
 end
 
 -- Poll loop
 task.spawn(function()
+    task.wait(2) -- wait for character to fully load on startup
     while true do
         task.wait(0.1)
         if not enabled or buying then continue end
@@ -163,4 +154,4 @@ task.spawn(function()
     end
 end)
 
-print("[AutoArmor] Loaded! Press F1 to toggle.")
+print("[AutoArmor] Loaded! Auto armor is ON. Press F1 to toggle.")
