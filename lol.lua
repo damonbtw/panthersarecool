@@ -3,27 +3,34 @@
 
 local Players = game:GetService("Players")
 local localPlayer = Players.LocalPlayer
-local enabled = true -- ON by default
+local enabled = true
 local buying = false
 local savedPosition = nil
 
--- Watermark
+-- Screen width for centering
+local screenWidth = workspace.CurrentCamera.ViewportSize.X
+local charWidth = 7
+
 local statusLabel = Drawing.new("Text")
-statusLabel.Text = "Auto Armor | ON"
-statusLabel.Size = 13
+statusLabel.Text = "Damon <3 | ON"
+statusLabel.Size = 15
 statusLabel.Color = Color3.fromRGB(100, 220, 130)
 statusLabel.Transparency = 1
 statusLabel.Outline = true
-statusLabel.Position = Vector2.new(25, 25)
+statusLabel.Position = Vector2.new((screenWidth / 2) - (#"Damon <3 | ON" * charWidth / 2), 16)
 statusLabel.Visible = true
 
 local function updateStatus()
     if enabled then
-        statusLabel.Text = "Auto Armor | ON"
+        local t = "Damon <3 | ON"
+        statusLabel.Text = t
         statusLabel.Color = Color3.fromRGB(100, 220, 130)
+        statusLabel.Position = Vector2.new((screenWidth / 2) - (#t * charWidth / 2), 16)
     else
-        statusLabel.Text = "Auto Armor | OFF"
+        local t = "Damon <3 | OFF"
+        statusLabel.Text = t
         statusLabel.Color = Color3.fromRGB(200, 200, 200)
+        statusLabel.Position = Vector2.new((screenWidth / 2) - (#t * charWidth / 2), 16)
     end
 end
 
@@ -34,6 +41,12 @@ local function pressShift()
     task.wait(0.15)
 end
 
+local function getHRP()
+    local char = localPlayer.Character
+    if not char then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
 local function buyArmor()
     if buying then return end
     buying = true
@@ -42,7 +55,7 @@ local function buyArmor()
     local char = localPlayer.Character
     if not char then buying = false return end
 
-    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hrp = getHRP()
     if not hrp then buying = false return end
 
     local bodyEffects = char:FindFirstChild("BodyEffects")
@@ -55,9 +68,10 @@ local function buyArmor()
     local head = block:FindFirstChild("Head")
     if not head then print("[AutoArmor] No head") buying = false return end
 
-    -- Save position right away
-    savedPosition = hrp.Position
-    print("[AutoArmor] Saved: " .. tostring(savedPosition))
+    -- Save position as local copy so it cannot be overwritten between runs
+    local returnPos = Vector3.new(hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+    savedPosition = returnPos
+    print("[AutoArmor] Saved: " .. tostring(returnPos))
 
     -- Unequip tool
     print("[AutoArmor] Unequipping")
@@ -66,12 +80,12 @@ local function buyArmor()
     keypress(0x33) task.wait(0.05) keyrelease(0x33) task.wait(0.05)
     keypress(0x33) task.wait(0.05) keyrelease(0x33) task.wait(0.1)
 
-    -- Teleport onto block
+    -- Teleport to shop
     print("[AutoArmor] Teleporting to shop")
     hrp.Position = head.Position + Vector3.new(0, 2.5, 0)
     task.wait(0.15)
 
-    -- Look down multiple times to make sure it sticks
+    -- Look down
     mousemoverel(0, 9999)
     task.wait(0.1)
     mousemoverel(0, 9999)
@@ -81,14 +95,12 @@ local function buyArmor()
     pressShift()
     task.wait(0.1)
 
-    -- Look down again after shiftlock exit
     mousemoverel(0, 9999)
     task.wait(0.1)
 
-    -- Spam click until armor bought or hit limit
+    -- Spam click
     print("[AutoArmor] Clicking...")
     local attempts = 0
-
     while attempts < 50 do
         if not enabled then
             print("[AutoArmor] Cancelled")
@@ -104,22 +116,34 @@ local function buyArmor()
         attempts += 1
     end
 
+    -- Reset camera BEFORE re-entering shiftlock
+    print("[AutoArmor] Resetting camera")
+    mousemoverel(0, -9999) -- snap to max up
+    task.wait(0.05)
+    mousemoverel(0, 3600)  -- tilt down to comfortable angle
+    task.wait(0.1)
+
     -- Re-enter shiftlock
     pressShift()
-
-    -- Always tp back no matter what
     task.wait(0.1)
-    print("[AutoArmor] Teleporting back")
-    hrp.Position = savedPosition
-    print("[AutoArmor] Done!")
 
+    -- Re-fetch hrp in case it changed
+    hrp = getHRP()
+    if hrp and savedPosition then
+        print("[AutoArmor] Teleporting back to " .. tostring(savedPosition))
+        hrp.Position = savedPosition
+    else
+        print("[AutoArmor] ERROR: Could not get HRP for tp back")
+    end
+
+    print("[AutoArmor] Done!")
     task.wait(1)
     buying = false
 end
 
 -- Poll loop
 task.spawn(function()
-    task.wait(2) -- wait for character to fully load on startup
+    task.wait(2)
     while true do
         task.wait(0.1)
         if not enabled or buying then continue end
@@ -154,4 +178,4 @@ task.spawn(function()
     end
 end)
 
-print("[AutoArmor] Loaded! Auto armor is ON. Press F1 to toggle.")
+print("[AutoArmor] Loaded! Damon <3 auto armor is ON. Press F1 to toggle.")
